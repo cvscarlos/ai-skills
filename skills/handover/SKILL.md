@@ -77,7 +77,7 @@ Before writing the file, verify:
 - [ ] Key decisions include rationale, not just the choice
 - [ ] Next steps are specific enough to start immediately
 - [ ] Key files are listed in priority order
-- [ ] Commands to run are correct and tested
+- [ ] No repo-discoverable info included (stack, build commands, setup instructions)
 
 ### 6. Output
 
@@ -90,6 +90,7 @@ Reply: "Handover saved to `tmp/HANDOVER.md`. To resume: `cat tmp/HANDOVER.md`"
 - **Capture the "why"**: Decisions without rationale are useless to the next agent.
 - **Include failures**: What didn't work is often more valuable than what did.
 - **Provider-agnostic**: No tool-specific instructions in the output. It must work for any AI tool.
+- **Skip discoverable info**: Don't include information the next agent can find from the repo itself (stack, frameworks, build/test/run commands, project setup). The agent has access to `AGENTS.md`, `README`, `Makefile`, `package.json`, etc.
 
 ## Bad Handover Examples
 
@@ -134,13 +135,16 @@ No explanation of WHICH tests are failing, WHY they fail, or what was already tr
 ## Progress
 
 ### Done
+
 - [x] <completed task — include file paths, function names, commit hashes>
 - [x] <completed task>
 
 ### In Progress
+
 - [ ] <partially-done task — describe current state and what remains>
 
 ### Remaining
+
 - [ ] <not-yet-started task>
 
 ## What Didn't Work
@@ -150,28 +154,19 @@ No explanation of WHICH tests are failing, WHY they fail, or what was already tr
 
 ## Key Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| <decision> | <why> |
+| Decision   | Rationale |
+| ---------- | --------- |
+| <decision> | <why>     |
 
 ## Gotchas
 
 - <non-obvious issue that would waste time if rediscovered>
 - <important context the next agent needs>
 
-## Current State
-
-### Modified Files
-
-| File | Changes |
-|------|---------|
-| `<path>` | <what changed and why> |
-
-### Test Status
+## Test Status
 
 - **Passing:** <yes/no/partial>
-- **Failing:** <specific failures or "none">
-- **Command:** `<exact test command>`
+- **Failing:** <specific test failures or "none">
 
 ## Blockers
 
@@ -187,11 +182,6 @@ No explanation of WHICH tests are failing, WHY they fail, or what was already tr
 
 1. `<path/to/file>` — <why it's important>
 2. `<path/to/file>` — <why it's important>
-
-## Environment
-
-- **Stack:** <languages, frameworks, key dependencies>
-- **Build:** `<command>`
-- **Test:** `<command>`
-- **Run:** `<command>`
 ```
+
+---
