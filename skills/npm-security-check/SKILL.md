@@ -1,22 +1,16 @@
 ---
 name: npm-security-check
 description: >
-  Run a Socket.dev supply-chain security check on every npm/Node package
-  BEFORE installing it, updating it, or executing it via npx. Triggers
-  IMMEDIATELY whenever the agent is about to run `npm install <pkg>`,
-  `npm i <pkg>`, `npm add <pkg>`, `npm update <pkg>`, `npm upgrade`,
-  `yarn add`, `yarn upgrade`, `pnpm add`, `pnpm install <pkg>`,
-  `pnpm update`, `bun add`, `bun install <pkg>`, `npx <pkg>`,
-  `pnpm dlx`, `yarn dlx`, or `bunx <pkg>`. Also triggers on any phrase
-  that implies adding or updating a Node/JavaScript dependency — "let's
-  use <pkg>", "install the X package", "add <pkg> to deps", "bump
-  <pkg>", "try this CLI: npx <pkg>", or editing `package.json` to add a
-  dependency. Use this skill EVEN IF the user did not explicitly ask
-  for a security check — supply-chain attacks, malware, and typosquats
-  on npm are common and the cost of one extra check is minutes vs. days
-  of cleanup. The skill checks Socket score, malware verdicts, install
-  scripts, network/shell access, CVEs, and maintainer trust, then
-  decides whether to proceed, warn, or abort.
+  Run a Socket.dev supply-chain check before installing, updating, or
+  executing any npm package. Triggers on `npm install/i/add/update/upgrade
+  <pkg>`, `yarn add/upgrade/dlx`, `pnpm add/install/update/dlx`, `bun
+  add/install`, `npx`, `pnpx`, `bunx`, or any phrase that adds/bumps a
+  Node dependency ("let's use <pkg>", "install X", "bump <pkg>"),
+  including direct `package.json` edits. Use this skill EVEN IF the
+  user did not ask — npm typosquats, malware, and malicious postinstall
+  scripts are common, and one extra check beats days of cleanup. Checks
+  Socket score, malware verdicts, install scripts, capabilities, CVEs,
+  and maintainer trust, then decides PROCEED, WARN, or ABORT.
 ---
 
 # npm Security Check (Socket.dev)
