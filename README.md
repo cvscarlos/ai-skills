@@ -28,6 +28,22 @@ npx skills add cvscarlos/ai-skills --skill handover
 
 ---
 
+### [documentation](./skills/documentation/) — docs for humans, not developers
+
+Ask an AI agent to "write documentation" and you usually get a JSDoc-flavored explainer aimed at the next engineer. Fine for an API reference. Useless for the Implementation engineer setting up a feature for a client, the PM tracking what shipped, or the CS rep answering a ticket.
+
+`documentation` writes Markdown for the people who *use* the software but don't read code. Implementation, Product, CS, support, QA, ops, BAs. It reads the code as the source of truth, then writes in the language of the reader's job — workflows, business rules, configuration, what changes for the customer.
+
+Scouts the repo's existing `docs/` folder to match house style. Code blocks survive only when the reader will copy, paste, send, or recognize them (embed snippets, configuration values, sample payloads). Unknowns get `[TODO]` placeholders, not fabrications.
+
+```bash
+npx skills add cvscarlos/ai-skills --skill documentation
+```
+
+**Use when:** documenting a feature for non-devs · writing a setup guide a client can follow · explaining how a feature ties to business rules · adding or editing files in the repo's `docs/` folder.
+
+---
+
 ### [npm-security-check](./skills/npm-security-check/) — gate every npm install
 
 One typosquat. One malicious postinstall script. That's all it takes to ship your SSH keys to a stranger.
