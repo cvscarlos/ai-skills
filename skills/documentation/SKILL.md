@@ -1,20 +1,6 @@
 ---
 name: documentation
-description: >
-  Writes human-friendly Markdown documentation for non-developer audiences —
-  Implementation, product, project, CS, support, QA, ops, business
-  analysts. Explains how a feature works, how to set it up or configure it
-  for a client, how it ties to business rules and the product roadmap —
-  for technical readers who don't read code. Code blocks appear only when the reader will copy, paste, send, or
-  recognize them (embed snippets, config values, sample payloads) — not to
-  explain how the system is built. Use when asked to "document this for the
-  implementation team", "write a guide for product / PM / CS", "explain how
-  X works for non-devs", or for setup guides, runbooks, FAQs, hand-off docs
-  aimed at internal non-dev teams. Also use when adding or editing a
-  Markdown file inside the repo's `docs/` folder for a non-developer
-  audience. Do NOT use for API reference, developer READMEs, code-level
-  docs (JSDoc, docstrings), or framework / testing guides — those are
-  different docs.
+description: Writes human-friendly Markdown documentation for non-developer audiences — Implementation, product, project, CS, support, QA, ops, business analysts. Explains how a feature works, how to set it up or configure it for a client, how it ties to business rules and the product roadmap — for technical readers who don't read code. Code blocks appear only when the reader will copy, paste, send, or recognize them (embed snippets, config values, sample payloads) — not to explain how the system is built. Use when asked to "document this for the implementation team", "write a guide for product / PM / CS", "explain how X works for non-devs", or for setup guides, runbooks, FAQs, hand-off docs aimed at internal non-dev teams. Also use when adding or editing a Markdown file inside the repo's `docs/` folder for a non-developer audience. Do NOT use for API reference, developer READMEs, code-level docs (JSDoc, docstrings), or framework / testing guides — those are different docs.
 ---
 
 # Documentation

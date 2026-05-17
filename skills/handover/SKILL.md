@@ -1,11 +1,6 @@
 ---
 name: handover
-description: >
-  Generates a comprehensive handover document for another AI agent to seamlessly
-  continue work on a task without prior context. Use when asked to "handover",
-  "save state", "switch providers", "switch to claude/codex/opencode/cursor", or
-  prepare a summary for the next AI session. Also use when moving work between
-  directories of the same repository.
+description: Generates a comprehensive handover document for another AI agent to seamlessly continue work on a task without prior context. Use when asked to "handover", "save state", "switch providers", "switch to claude/codex/opencode/cursor", or prepare a summary for the next AI session. Also use when moving work between directories of the same repository.
 ---
 
 # Agent Handover Protocol

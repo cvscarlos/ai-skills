@@ -1,16 +1,6 @@
 ---
 name: npm-security-check
-description: >
-  Run a Socket.dev supply-chain check before installing, updating, or
-  executing any npm package. Triggers on `npm install/i/add/update/upgrade
-  <pkg>`, `yarn add/upgrade/dlx`, `pnpm add/install/update/dlx`, `bun
-  add/install`, `npx`, `pnpx`, `bunx`, or any phrase that adds/bumps a
-  Node dependency ("let's use <pkg>", "install X", "bump <pkg>"),
-  including direct `package.json` edits. Use this skill EVEN IF the
-  user did not ask — npm typosquats, malware, and malicious postinstall
-  scripts are common, and one extra check beats days of cleanup. Checks
-  Socket score, malware verdicts, install scripts, capabilities, CVEs,
-  and maintainer trust, then decides PROCEED, WARN, or ABORT.
+description: Run a Socket.dev supply-chain check before installing, updating, or executing any npm package. Triggers on `npm install/i/add/update/upgrade <pkg>`, `yarn add/upgrade/dlx`, `pnpm add/install/update/dlx`, `bun add/install`, `npx`, `pnpx`, `bunx`, or any phrase that adds/bumps a Node dependency ("let's use <pkg>", "install X", "bump <pkg>"), including direct `package.json` edits. Use this skill EVEN IF the user did not ask — npm typosquats, malware, and malicious postinstall scripts are common, and one extra check beats days of cleanup. Checks Socket score, malware verdicts, install scripts, capabilities, CVEs, and maintainer trust, then decides PROCEED, WARN, or ABORT.
 ---
 
 # npm Security Check (Socket.dev)
