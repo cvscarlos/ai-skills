@@ -68,6 +68,24 @@ npx skills add cvscarlos/ai-skills --skill npm-security-check
 
 ---
 
+### [pr-review](./skills/pr-review/) — a verdict, not a rubber stamp
+
+Ask an AI to review a PR and you get one of two failures: a wall of generic praise that's indistinguishable from not reviewing, or a checklist recited back at you. Neither tells you the one thing you need: *can I merge this?*
+
+`pr-review` produces a verdict — **Approve**, **Hold**, or **Don't approve yet** — and the concrete evidence behind it. Specific files, code paths, failing checks. It triages every existing comment thread against the actual diff (a "resolved" marker isn't evidence — the diff is). It hunts the places PRs look fine but aren't: tautological mocks, tests that pass on the default branch, coverage that'll rot in six months.
+
+Review-only by default. It never posts or approves on its own — only after you explicitly say so. When you do, it writes an approval comment for a human reader, not a report that an AI followed instructions.
+
+Works against GitHub via the `gh` CLI.
+
+```bash
+npx skills add cvscarlos/ai-skills --skill pr-review
+```
+
+**Use when:** reviewing a PR · deciding whether to approve · triaging review comments · writing an approval that says something.
+
+---
+
 ## Why these skills
 
 Three rules. Every skill in this repo follows them.
