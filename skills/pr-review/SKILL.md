@@ -177,11 +177,45 @@ Do not paste this list into the approval body — it's only there to decide whet
 Write for the PR author and human reviewers, not as a report that an AI followed review instructions.
 
 - Lead with the engineering conclusion: what is correct, why the PR is safe to approve, or what caveat remains non-blocking.
+- Stay anchored to *this* PR. Every point must make sense against the branch the PR merges into and speak to what the PR set out to do — judge it against its title, description, and target branch, not against changes you imagine it could have made. If a point doesn't connect to the author's stated goal, it doesn't belong in the body.
 - Include only evidence that changes reviewer confidence — behavior verified, production/log data, affected flows, important files, test results, CI status, known pre-existing failures.
 - At least one sentence must be specific to this PR. Avoid generic approval phrases.
 - Keep non-blocking concerns clearly labeled as optional. Don't approve with language that sounds like unresolved required work.
 - Compact, concrete language over pleasantries. Avoid "thanks", "nice work", "happy to", and bare "looks good".
 - If checks are partially blocked by unrelated existing failures, name the failing check or file directly.
+
+### Report what you verified, not what the author decided
+
+The author spent days in this code; you spent minutes. They chose the boundaries and made the trade-offs deliberately, so a bullet that *endorses their decision* — "catching it here is the right boundary", "the split maps cleanly to the two failure modes", "suppressing under `?draft=true` is intended" — hands them nothing they don't already have. It reads as grading their homework. And "is intended" or "is the right call" is you *inferring* intent you can't see: in review you know what the author wrote, not what they were thinking.
+
+What earns a place in the body is work the author *couldn't* have done for themselves:
+
+- **What you ran, and the result** — "17/17 tests pass", "ran the 3 changed test files locally", "verified the affected page on the integration env".
+- **What you cross-checked against a source of truth outside the diff** — "verified against installed `dep@7.26.3`", "the `onError` signature in `lib@5.100.14` takes a 4th arg, so `meta` resolves", "cross-checked against the `handleServerError` helper", "matches upstream PR #1674".
+- **A concrete, actionable finding** — a bug, a nit, a follow-up.
+
+The test for every bullet: **could the author have written this without me?** If yes — it's their decision, their rationale, or a restatement of their diff — cut it. If it took going outside the diff to know it (running it, checking a dependency version, reading adjacent code, hitting the live app), keep it.
+
+Before — every bullet validates a decision the author already made (all four are cuttable):
+
+```markdown
+Approved.
+
+- Catching the config-load errors in the `config` property is the right boundary — exactly where these escaped before.
+- Splitting the two error types maps cleanly to the two real failure modes.
+- Suppressing the notification under `?draft=true` is intended: an admin previewing their own draft shouldn't be paged.
+- Regression tests exercise each distinct branch.
+```
+
+After — each bullet reports something checked, not something endorsed:
+
+```markdown
+Approved.
+
+- Ran the 5 new regression tests locally; all pass, each covering a distinct branch (unpublished, invalid payload, lazy-settings failure, draft-skip, registration route).
+- Confirmed the escaped errors reached the error tracker unhandled before this — the new catch sits on the only path that hits them (`setup()`, before `dispatch`).
+- Cross-checked the draft-skip: `?draft=true` is the sole caller that suppresses, so non-draft failures still notify as before.
+```
 
 ### What not to put in the body
 
@@ -196,6 +230,7 @@ If no, cut it. Specifically:
 - **Resolution status of existing threads.** "Codex P2 is resolved", "the author addressed @X's feedback" — the thread itself shows resolution. Mention prior comments only when their resolution materially changes the approval (a security blocker was resolved, a correctness bug was fixed in a later commit).
 - **Private review context.** Concerns *you* considered but that were never raised on the PR. If you investigated whether `<div>` inside `<label>` was an issue and decided it wasn't, don't pre-empt that on the PR — readers will wonder why you brought it up.
 - **Re-statements of the diff.** "The change moves X out of Y", "the new file adds Z" — the diff already shows this. The body should describe what was *verified*, not what was *changed*.
+- **Endorsements of the author's decisions.** "Catching it here is the right boundary", "the split maps cleanly", "X is intended" — the author made these calls deliberately and knows them better than you; restating their design as correct adds nothing, and "is intended" guesses at intent the diff doesn't show. Report what you *verified*, not what they *decided* — see "Report what you verified, not what the author decided".
 - **Pure-process evidence.** "I read the comments", "I checked the tests", "I fetched GitHub", "I reviewed the latest head" — assume the reader trusts the review. Only mention a verification step when it surfaces something the reader can't see (e.g., "verified against prod data", "ran the affected tests locally").
 - **AI mechanics.** "I am an AI", "the user asked me to approve", "I followed the prompt". Keep that out of the public comment entirely.
 
@@ -229,16 +264,18 @@ The prefix applies to line comments only — the approval body is already attrib
 
 ### Format for readability
 
-Reviewers skim. A wall of text with five inline-code spans hides the conclusion and makes the evidence hard to verify at a glance.
+Reviewers skim. A wall of text hides the conclusion and makes the evidence hard to verify at a glance.
+
+**Default structure, always: a one-line lead, a blank line, then bullets — never a single flowing paragraph.** Even a short approval takes the lead-plus-bullets shape. A prose paragraph that strings five facts together with commas and "and" is the single most common way an otherwise-good approval becomes unreadable — if you catch yourself writing one, that's the signal to split it into bullets. And break to a new line after every sentence-ending `.`, `?`, or `!`, because GitHub collapses consecutive sentences into one wrapped block and the structure you intended disappears.
 
 - **One short lead line, blank line, then bullets.** The lead is the verdict ("Approved.", "Approved with one non-blocking note.").
-- **Target 3–6 bullets max.** If it grows past that, the PR probably needs a real review thread, not a longer approval.
-- **One idea per bullet.** Don't pack two pieces of evidence into a single bullet with "and".
+- **3 bullets max — fewer is better.** Keep only the points that change merge confidence. If a fourth point feels essential, it's usually a line comment, not approval-body material (see "Body vs. line comments"). More than three bullets means the PR needs a real review thread, not a longer approval.
+- **One short sentence per bullet, one idea.** A bullet is a headline, not a paragraph. If you need a second sentence, a trailing `— because…` clause, or an "and" stitching two facts together to make the point, it's too deep for the approval body — cut it to its core claim or move the detail to a line comment. The author can open the diff for the rest; the body exists to state the verdict and the one or two things that justify it.
 - **Blank lines between paragraphs / between the lead and the bullet list.** GitHub markdown collapses without them.
 - **Inline `code` is for one short identifier.** If you'd need three or more inline-code spans in a sentence, switch to bullets (one identifier per bullet) or a fenced block.
 - **Fenced code block when showing more than one line of code, or an actual snippet rather than just a name.**
 - **Spell out acronyms on first use** within a comment ("JWT (JSON Web Token) refresh", "CSP (Content Security Policy)"). After the first occurrence the bare acronym is fine.
-- **Start a new line after each sentence.** GitHub markdown renders consecutive sentences as one wrapped block — hard to scan. (Periods inside identifiers like `option.is_active`, abbreviations like `e.g.`, or version numbers don't count — only sentence-ending periods.)
+- **Start a new line after every sentence — including inside a bullet.** Break after each sentence-ending `.`, `?`, or `!`. GitHub markdown renders consecutive sentences as one wrapped block — hard to scan. (Periods inside identifiers like `option.is_active`, abbreviations like `e.g.`, or version numbers don't count — only sentence-ending punctuation.)
 
 Anti-pattern (wall of text):
 
@@ -254,6 +291,28 @@ Approved.
 - Mechanical swap from `/regex/.test(input)` to `isValidFoo()` is consistent across all interfaces.
 - Divergent paths are intentional per the PR description: acme keeps the auth carve-out, globex intentionally always validates.
 - Non-blocking JSDoc cleanup can land as a follow-up.
+```
+
+Each bullet is a headline — trim the paragraph down to its claim. A reviewer who wants the mechanism opens the diff.
+
+Too deep (each bullet is a multi-sentence paragraph — the most common way an approval gets bloated):
+
+```markdown
+Approved.
+
+- The validation swap is the correct fix: `validateInput()` now runs on every interface, so malformed payloads are rejected before they reach the mapper, while the legacy `/regex/` path is fully removed. Confirmed no callers still reference the old `rawInputCheck` helper.
+- Legacy records are handled by normalize-on-read rather than a backfill. The check only fires on the old payload shape, and the writer now emits the canonical shape, so new writes can't re-trigger it.
+- Non-blocking, follow-up: `normalizeLegacyShape` runs on every read path (4 call sites), and the records carry no version marker to self-heal. Worth normalizing once at load.
+```
+
+Better (headlines; the follow-up moves to a line comment):
+
+```markdown
+Approved.
+
+- Validation swap is the canonical fix: `validateInput()` rejects malformed payloads before the mapper.
+- Legacy records normalize-on-read; the new write shape can't re-trigger the old path.
+- Swap is complete — no callers reference the old `rawInputCheck` helper.
 ```
 
 ### Approval body shapes
