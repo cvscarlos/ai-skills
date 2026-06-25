@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Decide whether a GitHub PR can be approved, then optionally write and submit the approval comment when the user explicitly authorizes it. Use when the user says "review this PR", "review PR #X", "can I approve this PR", "PR review", "give me a PR review", "look at this pull request", "approve it", "approve the PR", "submit an approval review", "LGTM comment", or pastes a GitHub PR URL. Produces a verdict (approve / hold / don't approve) with concrete evidence and a "what would I do differently" perspective. Approval mode is opt-in — the skill never approves or posts on its own, only after the user clearly instructs it to.
+description: Decide whether a GitHub PR can be approved, then optionally write and submit the approval comment when the user explicitly authorizes it. Use when the user says "review this PR", "review PR \#X", "can I approve this PR", "PR review", "give me a PR review", "look at this pull request", "approve it", "approve the PR", "submit an approval review", "LGTM comment", or pastes a GitHub PR URL. Produces a verdict (approve / hold / don't approve) with concrete evidence and a "what would I do differently" perspective. Approval mode is opt-in — the skill never approves or posts on its own, only after the user clearly instructs it to.
 ---
 
 # PR Review
@@ -149,6 +149,14 @@ Use the comment table format from the "Triage Existing Comments" section above. 
 
 For each 🔴 blocker, write the exact text the user can paste into GitHub. Match the user's PR comment style: terse, concrete, no filler. The user posts these — you do not.
 
+When a blocker needs more than a sentence — confirming a real issue *and* proposing the fix — keep it scannable instead of a wall of prose:
+
+- **Bold call-to-action labels** carry the structure: `**Confirmed — this is real.**`, `**The problem:**`, `**Why it happens:**`, `**To solve it:**`, `**Also add test coverage:**`. The reader skims labels first, then reads the part they need.
+- **One code block, for the fix only.** Context already visible in the diff (the current code, the function referenced) stays as prose with inline `identifiers` — don't give it its own block. Three or four stacked blocks bury the one that matters.
+- **One line per point.** Reference the diff (`see _close_with_operation`) instead of reproducing it.
+
+This is the substantive-comment form; the routine `❓`/`💡` notes stay 1–2 sentences.
+
 ### 5. What I'd do differently
 
 A short, concrete alternative if there is one worth raising — even on an approve. Skip if the current approach is fine. Examples worth raising: a simpler structure, a different boundary, a name that would age better, a missing test that's cheap to add. Don't list rewrites for the sake of having an opinion.
@@ -254,10 +262,13 @@ Anything else that's "optional, suggestion, or feedback" belongs on a file line,
 
 When you post a line comment as part of an approval flow, **start the body with `AI suggestion:` on its own line, then a blank line, then the actual comment text**. Don't lead the first sentence with the phrase. This keeps AI-authored suggestions visually distinct from human review feedback so the author can weigh them accordingly.
 
+Format the comment body the same way as the approval body: **one sentence per line**. Start each sentence on its own line by breaking after every sentence-ending `.`, `?`, or `!`. GitHub renders consecutive sentences as one wrapped block, so without the breaks the comment becomes hard-to-scan running text.
+
 ```markdown
 AI suggestion:
 
-This fires for every `option.is_active`, but the target only exists for the currently selected option …
+This fires for every `option.is_active`, but the target only exists for the currently selected option.
+Scope the handler to the active option so the others don't get redundant updates.
 ```
 
 The prefix applies to line comments only — the approval body is already attributed to the reviewer in the GitHub UI.
