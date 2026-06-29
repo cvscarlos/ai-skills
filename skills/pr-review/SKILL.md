@@ -198,7 +198,7 @@ The author spent days in this code; you spent minutes. They chose the boundaries
 
 What earns a place in the body is work the author *couldn't* have done for themselves:
 
-- **What you ran, and the result** — "17/17 tests pass", "ran the 3 changed test files locally", "verified the affected page on the integration env".
+- **What you ran, and the result** — "17/17 tests pass", "ran the 3 changed test files locally", "verified the affected page on the integration env". This does *not* mean automated gates: a linter, formatter, type-checker, or CI job running clean is a given, not a finding (see "What not to put in the body").
 - **What you cross-checked against a source of truth outside the diff** — "verified against installed `dep@7.26.3`", "the `onError` signature in `lib@5.100.14` takes a 4th arg, so `meta` resolves", "cross-checked against the `handleServerError` helper", "matches upstream PR #1674".
 - **A concrete, actionable finding** — a bug, a nit, a follow-up.
 
@@ -240,6 +240,7 @@ If no, cut it. Specifically:
 - **Re-statements of the diff.** "The change moves X out of Y", "the new file adds Z" — the diff already shows this. The body should describe what was *verified*, not what was *changed*.
 - **Endorsements of the author's decisions.** "Catching it here is the right boundary", "the split maps cleanly", "X is intended" — the author made these calls deliberately and knows them better than you; restating their design as correct adds nothing, and "is intended" guesses at intent the diff doesn't show. Report what you *verified*, not what they *decided* — see "Report what you verified, not what the author decided".
 - **Pure-process evidence.** "I read the comments", "I checked the tests", "I fetched GitHub", "I reviewed the latest head" — assume the reader trusts the review. Only mention a verification step when it surfaces something the reader can't see (e.g., "verified against prod data", "ran the affected tests locally").
+- **Results from automated gates.** Anything a linter, formatter, type-checker, pre-commit hook, or CI workflow runs on every push is a foregone conclusion — the code conforms or it wouldn't be mergeable. "Ran `ruff` — clean", "`prettier`/`black`/`eslint` passes", "no formatting issues", "lint green" tells the reader nothing they didn't already assume. Glance at the repo's `.github/workflows/`, `.pre-commit-config.yaml`, and linter config to see what's automated, then report only what those tools *can't* catch — logic, behavior, dead code an import-linter wouldn't flag, cross-file references, runtime correctness.
 - **AI mechanics.** "I am an AI", "the user asked me to approve", "I followed the prompt". Keep that out of the public comment entirely.
 
 When in doubt: did anyone on the PR raise this, or is it leaking from your private investigation? If the latter, it doesn't belong in the body.
