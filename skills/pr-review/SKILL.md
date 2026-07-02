@@ -169,6 +169,15 @@ If the verdict is **Approve** or **Approve with non-blocking notes** and the use
 
 Only do any of this once the user has explicitly authorized the approval after seeing the verdict. The default mode is still review-only.
 
+### The review and the approval comment are different artifacts
+
+Your review — what you report back to the user — and the approval comment you post on GitHub have different audiences and different rules. Do not build the second by reformatting the first.
+
+- **The review is private and answers the user's request.** If they asked you to run the tests, confirm they fail on `main`, reproduce a bug, or check that a query is index-backed — do it, and tell *them* what you found. That's the job they gave you.
+- **The approval comment is public and for the PR author.** It is a fresh artifact, filtered through "What not to put in the body" — not a copy of your review notes. Rebuild it from scratch.
+
+A user instruction like *"verify the new tests fail on the default branch"* tells you what to **do during the review**, not what to **post**. Having done it — and having it pass — is not by itself postable. Run every candidate bullet through the body rules regardless of *why* you looked into it: if it's an automated-gate result, process narration, or something the author already knows, it stays out of the public comment even though the user asked you to check it. The user's prompt drives the review; this skill drives the posted comment.
+
 ### Pre-flight check (private to you)
 
 Before drafting the body, internally confirm:
@@ -198,7 +207,7 @@ The author spent days in this code; you spent minutes. They chose the boundaries
 
 What earns a place in the body is work the author *couldn't* have done for themselves:
 
-- **What you ran, and the result** — "17/17 tests pass", "ran the 3 changed test files locally", "verified the affected page on the integration env". This does *not* mean automated gates: a linter, formatter, type-checker, or CI job running clean is a given, not a finding (see "What not to put in the body").
+- **What you ran that CI can't show** — a new test run against the *default branch* to confirm it fails there (CI only runs it on the PR branch, where passing is guaranteed, so the pass proves nothing), reproducing the bug against the pre-fix commit, or "verified the affected page on the integration env". Never report the PR-branch pass or "tests green" — that's the automated gate (see "What not to put in the body"). Report the discriminating result instead: *"the new test fails on `main`, so it genuinely covers the change."*
 - **What you cross-checked against a source of truth outside the diff** — "verified against installed `dep@7.26.3`", "the `onError` signature in `lib@5.100.14` takes a 4th arg, so `meta` resolves", "cross-checked against the `handleServerError` helper", "matches upstream PR #1674".
 - **A concrete, actionable finding** — a bug, a nit, a follow-up.
 
@@ -220,7 +229,7 @@ After — each bullet reports something checked, not something endorsed:
 ```markdown
 Approved.
 
-- Ran the 5 new regression tests locally; all pass, each covering a distinct branch (unpublished, invalid payload, lazy-settings failure, draft-skip, registration route).
+- The 5 new regression tests each cover a distinct branch (unpublished, invalid payload, lazy-settings failure, draft-skip, registration route) and fail on `main` — real coverage, not decoration.
 - Confirmed the escaped errors reached the error tracker unhandled before this — the new catch sits on the only path that hits them (`setup()`, before `dispatch`).
 - Cross-checked the draft-skip: `?draft=true` is the sole caller that suppresses, so non-draft failures still notify as before.
 ```
@@ -239,7 +248,7 @@ If no, cut it. Specifically:
 - **Private review context.** Concerns *you* considered but that were never raised on the PR. If you investigated whether `<div>` inside `<label>` was an issue and decided it wasn't, don't pre-empt that on the PR — readers will wonder why you brought it up.
 - **Re-statements of the diff.** "The change moves X out of Y", "the new file adds Z" — the diff already shows this. The body should describe what was *verified*, not what was *changed*.
 - **Endorsements of the author's decisions.** "Catching it here is the right boundary", "the split maps cleanly", "X is intended" — the author made these calls deliberately and knows them better than you; restating their design as correct adds nothing, and "is intended" guesses at intent the diff doesn't show. Report what you *verified*, not what they *decided* — see "Report what you verified, not what the author decided".
-- **Pure-process evidence.** "I read the comments", "I checked the tests", "I fetched GitHub", "I reviewed the latest head" — assume the reader trusts the review. Only mention a verification step when it surfaces something the reader can't see (e.g., "verified against prod data", "ran the affected tests locally").
+- **Pure-process evidence.** "I read the comments", "I checked the tests", "I fetched GitHub", "I reviewed the latest head" — assume the reader trusts the review. Only mention a verification step when it surfaces something the reader can't see (e.g., "verified against prod data", "ran the new test against `main` to confirm it fails there").
 - **Results from automated gates.** Anything a linter, formatter, type-checker, pre-commit hook, or CI workflow runs on every push is a foregone conclusion — the code conforms or it wouldn't be mergeable. "Ran `ruff` — clean", "`prettier`/`black`/`eslint` passes", "no formatting issues", "lint green" tells the reader nothing they didn't already assume. Glance at the repo's `.github/workflows/`, `.pre-commit-config.yaml`, and linter config to see what's automated, then report only what those tools *can't* catch — logic, behavior, dead code an import-linter wouldn't flag, cross-file references, runtime correctness.
 - **AI mechanics.** "I am an AI", "the user asked me to approve", "I followed the prompt". Keep that out of the public comment entirely.
 
