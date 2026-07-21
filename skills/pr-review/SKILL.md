@@ -74,6 +74,21 @@ Example:
 
 The user clicks any thread by appending its Discussion ID to the Base URL.
 
+### Handing replies back for the user to post
+
+When you have a reply the user should post on a specific thread but can't post it yourself (review-only mode, or a tool/permission limit), hand it back so it's trivial to paste:
+
+- The **thread URL** on its own line, as **plain text** — keep it out of a code block so it stays clickable.
+- The **reply in a fenced code block** — wrap only the answer so inline backticks render literally.
+
+Example:
+
+https://github.com/owner/repo/pull/123#discussion_r2662020009
+
+```
+Fixed at line 180-181: filter now uses `item.count > 0` instead of `item.enabled`
+```
+
 ## Test Discipline
 
 Tests are the most common place where a PR looks fine but isn't. For every new or modified test, ask the four questions below. A passing test suite is not the same as a tested change.
@@ -270,7 +285,7 @@ Anything else that's "optional, suggestion, or feedback" belongs on a file line,
 
 #### Prefix line comments with "AI suggestion:"
 
-When you post a line comment as part of an approval flow, **start the body with `AI suggestion:` on its own line, then a blank line, then the actual comment text**. Don't lead the first sentence with the phrase. This keeps AI-authored suggestions visually distinct from human review feedback so the author can weigh them accordingly.
+Whenever you post a line comment on a PR — approval flow or not — **start the body with `AI suggestion:` on its own line, then a blank line, then the actual comment text**. Don't lead the first sentence with the phrase. This keeps AI-authored suggestions visually distinct from human review feedback so the author can weigh them accordingly.
 
 Format the comment body the same way as the approval body: **one sentence per line**. Start each sentence on its own line by breaking after every sentence-ending `.`, `?`, or `!`. GitHub renders consecutive sentences as one wrapped block, so without the breaks the comment becomes hard-to-scan running text.
 
@@ -282,6 +297,40 @@ Scope the handler to the active option so the others don't get redundant updates
 ```
 
 The prefix applies to line comments only — the approval body is already attributed to the reviewer in the GitHub UI.
+
+#### Line comment style: finding → fix, two sentences
+
+Every line comment is exactly two sentences:
+
+1. **The finding** — the concrete defect or risk, with the evidence compressed into the same sentence as an em-dash clause or parenthetical, not narrated separately.
+2. **The ask** — the specific fix, test case, or question, concrete enough to act on without re-deriving it: the exact condition, the exact inputs, the exact assertion.
+
+Rules:
+
+- Lead with the fact, not the investigation. "I verified locally that X" becomes "X (verified locally)" — process narration shrinks to a parenthetical or disappears.
+- Inline `identifiers` carry the precision; no headings, lists, or severity labels inside the comment.
+- If it doesn't fit in two sentences, the overflow is either evidence to compress into the finding or a second finding that deserves its own comment.
+- Politeness that costs no length is welcome — "Could you add…" over a bare "Add…", "worth checking" over "check". Soften the phrasing, never the claim: the finding stays as direct as the evidence allows.
+
+Before (bloated — narrated evidence, restated context, three extra sentences):
+
+```markdown
+AI suggestion:
+
+None of the touched tests actually pin this fix — they all pass against `main`'s version of `return_label_service.py` (I verified locally: body courier == request courier everywhere, and `test_return_label` never asserts `label.courier`, so the acme-post fixture change is inert).
+The new fallback test only pins behavior that `main` already had.
+Can you add the one discriminating case: body `courier="acme-uk"`, request `courier="acme-dropoff"`, assert `label.courier == "acme-uk"`?
+Without it a future cleanup of the `or` fallback can silently revert the ticket.
+```
+
+After (finding → fix):
+
+```markdown
+AI suggestion:
+
+All touched tests pass against `main`'s version of this file, so nothing pins the new precedence.
+Could you add the discriminating case: body `courier="acme-uk"`, request `courier="acme-dropoff"`, assert `label.courier == "acme-uk"`?
+```
 
 ### Format for readability
 
@@ -399,7 +448,9 @@ Approved. The changes look consistent with the PR goal, and I do not see any blo
 
 ### Submitting the approval
 
-If line comments are part of the flow, post them first so the approval review wraps everything together. Then submit:
+If line comments are part of the flow, add them to a pending review first (see "Posting Comments — Pending Review Only") so the approval submission wraps everything together, then submit the pending review with `pull_request_review_write` method `submit_pending`, event `APPROVE`, and the approval body.
+
+Without line comments, `gh` works too:
 
 ```bash
 gh pr review <num> --approve --body "$(cat <<'EOF'
@@ -413,9 +464,19 @@ EOF
 
 Use `--body-file <path>` instead of inline heredoc when the body lives in a file already. Never submit the approval before the user has clearly authorized it for *this* PR — prior authorization on a different PR does not carry over.
 
+## Posting Comments — Pending Review Only
+
+When the user authorizes posting comments on the PR (with or without an approval), never post them as immediate one-off comments — no `gh pr comment`, no direct single review-comment API calls. Always batch them into a **pending review**:
+
+1. Create a pending review (GitHub MCP `pull_request_review_write`, method `create`, no `event`).
+2. Add each comment with `add_comment_to_pending_review`.
+3. Leave the review pending for the user to inspect, edit, and submit themselves — submit it only if they explicitly say so, and with the event they name.
+
+A pending review keeps the comments invisible to the PR author until the user signs off, lets the user amend or discard them before anything goes public, and lands all feedback as one review instead of a comment stream.
+
 ## What Not to Do
 
-- **Don't post comments yourself.** The user posts. You provide the text.
+- **Don't post comments yourself.** The user posts. You provide the text. When the user does authorize posting, go through a pending review (see "Posting Comments — Pending Review Only") — never one-off comments.
 - **Don't approve until explicitly authorized.** If the user asks "can I approve this PR?" or "should this be approved?", answer with the verdict first. Submit an approving GitHub review only when the user clearly instructs you to — see "Writing the Approval Comment" below.
 - **Don't trust "resolved" markers.** Verify against the diff.
 - **Don't recite phases.** They're discipline, not a script.
