@@ -5,61 +5,48 @@ description: Decide whether a GitHub PR can be approved, then optionally write a
 
 # PR Review
 
-Use this skill when the user wants you to review a GitHub PR and tell them whether it is approvable. The user is the decision maker. You produce a clear verdict and the evidence behind it; the user reads, decides, and posts any comments themselves.
+Use this skill when the user wants you to review a GitHub PR and tell them whether it is approvable. The user is the decision maker: you produce a clear verdict and the evidence behind it; they read, decide, and post any comments themselves.
 
-The default mode is review-only: produce a verdict and the evidence, but do not post comments or submit an approving review on your own. Approval is a separate, opt-in step — covered in the "Writing the Approval Comment" section near the end. Only act on it when the user explicitly tells you to approve.
+Default mode is review-only — produce a verdict and evidence, but don't post comments or submit an approving review on your own. Approval is a separate, opt-in step (see "Writing the Approval Comment"); only act on it when the user explicitly tells you to approve.
 
 ## What "good review" means here
 
-A review is useful when it changes the user's confidence about merging — either by surfacing something they would have missed, or by confirming the PR is safe with concrete evidence. Anything that doesn't change their decision is noise.
-
-The output is for a human reader who already knows the codebase. Skip generic process language ("I fetched the PR", "I read the diff"), skip rubber-stamp praise, skip checklists pasted verbatim. Lead with the verdict, then justify it.
+A review is useful when it changes the user's confidence about merging — by surfacing something they'd have missed, or confirming the PR is safe with concrete evidence. Anything that doesn't change their decision is noise. Write for a human who already knows the codebase: skip process language ("I fetched the PR", "I read the diff"), rubber-stamp praise, and pasted checklists. Lead with the verdict, then justify it.
 
 ## Always Refresh from GitHub
 
-Local state lies. The branch may have been force-pushed, comments may have been added, checks may have just failed. Before reviewing, refresh:
+Local state lies — the branch may have been force-pushed, comments added, checks just failed. Before reviewing:
 
-1. `git fetch origin` — make sure the local ref reflects the remote.
-2. If the PR branch is checked out locally, `git pull --ff-only` (or compare local HEAD vs the PR head SHA from GitHub).
-3. Pull the live PR state from GitHub. Prefer the `gh` CLI over the GitHub MCP whenever possible. The MCP returns large JSON blobs that burn context tokens quickly; `gh` lets you specify exact fields and pipe through `jq` or `head` to keep things lean. Reach for the MCP only when you need data `gh` doesn't expose cleanly — threaded review-comment metadata (`isResolved`, `isOutdated`), complex code/issue search, or GraphQL-level fields.
-
-Useful commands:
+1. `git fetch origin` so the local ref reflects the remote.
+2. If the PR branch is checked out, `git pull --ff-only` (or compare local HEAD vs the PR head SHA).
+3. Pull live PR state from GitHub. Prefer the `gh` CLI over the GitHub MCP — the MCP returns large JSON blobs that burn tokens; `gh` lets you name exact `--json` fields and pipe through `jq`/`head`. Reach for the MCP only for what `gh` can't expose cleanly: threaded review-comment metadata (`isResolved`, `isOutdated`), complex code/issue search, or GraphQL-level fields.
 
 ```bash
-# Lean PR overview — name only the fields you need
 gh pr view <num> --json title,body,state,mergeable,mergeStateStatus,additions,deletions,changedFiles,commits,reviews,statusCheckRollup,headRefOid
-
-# General timeline comments
-gh pr view <num> --comments
-
-# Full diff
-gh pr diff <num>
+gh pr view <num> --comments   # timeline comments
+gh pr diff <num>              # full diff
 ```
 
-For threaded **review** comments where you need resolution status (`isResolved`, `isOutdated`), the `gh` CLI does not expose those fields cleanly — use the GitHub MCP `get_review_comments` tool for those specifically. When using `gh --json`, always specify only the fields you need; for large outputs, pipe through `head` or `jq` to keep context usage in check.
-
-If the user gives you a PR URL but the branch isn't checked out locally, that's fine — review against `gh pr diff` plus targeted `gh api` reads for files. Don't refuse for lack of a local checkout.
+If the branch isn't checked out locally, that's fine — review against `gh pr diff` plus targeted `gh api` reads. Don't refuse for lack of a local checkout.
 
 ## Triage Existing Comments
 
-For every comment thread on the PR, decide one of:
+For every comment thread, decide one of:
 
-- **Addressed** — locate the change in the current diff and verify it actually resolves the concern. "Marked resolved" on GitHub does not count as evidence. The diff does.
-- **Outstanding** — the comment is correct and not addressed. Surface it.
-- **Incorrect** — the comment was wrong (misread the code, missed a constraint, etc.). Say so plainly with a one-line reason. Don't pretend a wrong comment needs to be addressed.
-- **Stale / non-blocking** — was correct at the time but no longer relevant, or was a nit the author chose not to take.
+- **Addressed** — locate the change in the current diff and verify it resolves the concern. "Marked resolved" is not evidence; the diff is.
+- **Outstanding** — correct and not addressed. Surface it.
+- **Incorrect** — the comment was wrong (misread code, missed a constraint). Say so plainly with a one-line reason; don't pretend a wrong comment needs addressing.
+- **Stale / non-blocking** — was correct once but no longer relevant, or a nit the author declined.
 
-When listing outstanding comments back to the user, group them by severity and use this table format so the user can navigate each thread by appending the Discussion ID to the PR's base URL:
+When listing outstanding comments back to the user, group by severity and use this table so they can open each thread by appending the Discussion ID to the base URL:
 
-| Column          | Description                                                                       |
-| --------------- | --------------------------------------------------------------------------------- |
-| `#`             | Sequential number                                                                 |
-| `Discussion ID` | The `rXXXXXXXXXX` identifier from the comment URL (used to build a browser link)  |
-| `File`          | Filename (without full path)                                                      |
-| `Line`          | Line number                                                                       |
-| `Issue`         | Brief description of the issue                                                    |
-
-Example:
+| Column          | Description                                                       |
+| --------------- | ----------------------------------------------------------------- |
+| `#`             | Sequential number                                                 |
+| `Discussion ID` | The `rXXXXXXXXXX` identifier from the comment URL                 |
+| `File`          | Filename (without full path)                                      |
+| `Line`          | Line number                                                       |
+| `Issue`         | Brief description                                                 |
 
 ```markdown
 ## 🔴 Blocking — 2 comments
@@ -72,16 +59,9 @@ Example:
 **Base URL:** `https://github.com/{owner}/{repo}/pull/{number}#discussion_`
 ```
 
-The user clicks any thread by appending its Discussion ID to the Base URL.
-
 ### Handing replies back for the user to post
 
-When you have a reply the user should post on a specific thread but can't post it yourself (review-only mode, or a tool/permission limit), hand it back so it's trivial to paste:
-
-- The **thread URL** on its own line, as **plain text** — keep it out of a code block so it stays clickable.
-- The **reply in a fenced code block** — wrap only the answer so inline backticks render literally.
-
-Example:
+When you have a reply the user should post on a specific thread but can't post it yourself (review-only mode, or a tool/permission limit), hand it back so it's trivial to paste: the **thread URL** on its own line as **plain text** (out of a code block, so it stays clickable), then the **reply in a fenced code block** (wrap only the answer so inline backticks render literally).
 
 https://github.com/owner/repo/pull/123#discussion_r2662020009
 
@@ -91,155 +71,105 @@ Fixed at line 180-181: filter now uses `item.count > 0` instead of `item.enabled
 
 ## Test Discipline
 
-Tests are the most common place where a PR looks fine but isn't. For every new or modified test, ask the four questions below. A passing test suite is not the same as a tested change.
+Tests are the most common place where a PR looks fine but isn't. A passing suite is not the same as a tested change. For every new/modified test, ask:
 
 ### 1. Would it fail on the default branch?
 
-Check whether `main` or `development` is the default for this repo. If the test passes on both branches, it isn't actually testing the new behavior — it's decoration. Run it against the default branch when feasible, or read the diff of the code-under-test and reason about whether the assertion depends on the change.
+Check whether `main` or `development` is the default. If the test passes on both branches, it isn't testing the new behavior — it's decoration. Run it against the default branch when feasible, or reason from the diff about whether the assertion depends on the change.
 
 ### 2. Is the same coverage already elsewhere?
 
-If the same code path is covered at another layer with different inputs, an additional same-shape test adds maintenance cost without catching new bugs. Flag duplicates.
+If the same path is covered at another layer with different inputs, an extra same-shape test adds maintenance cost without catching new bugs. Flag duplicates.
 
 ### 3. Is it tautological from over-mocking?
 
-If the mock dictates the answer the assertion checks, the test only proves the mock was wired up. The classic shape: mock a function to return `X`, then assert the caller returns `X`. That proves nothing about the production code path.
+If the mock dictates the answer the assertion checks, the test only proves the mock was wired up (`mock.return_value = X; assert result == X`). That proves nothing about the production path.
 
 ### 4. Will the test still be valuable in six months?
 
-A test that makes sense today, with full PR context, may be a maintenance burden once that context is gone. The author knows why every assertion exists right now; the maintainer reading it next year will not. Flag tests that look like they will age badly:
+Once the PR context is gone, a maintainer reads only the test name and body. Flag tests that will age badly:
 
-- **Coupled to implementation details** — assertions on internal call counts, private state, exact call ordering, or mock invocation specifics. These break on every refactor without the production behavior changing, and they push future maintainers to "fix" tests by mirroring whatever the code now does, which defeats the point.
-- **Coupled to a rare edge case** — an input shape the codebase will not realistically receive. The cost of keeping the test green forever exceeds the bug it would catch.
-- **Coupled to a temporary assumption** — a feature flag value, a transitional schema, a deprecated dependency, a migration intermediate state. The test will either silently lock that assumption in, or break loudly when it changes — usually at the worst time.
-- **Redundant within the PR itself** — if the PR adds eight tests where two well-chosen ones would prove the change, the extra six are debt. Ask whether the same confidence could be reached with fewer, simpler, or more focused tests.
+- **Coupled to implementation details** — internal call counts, private state, exact ordering, mock-invocation specifics. They break on every refactor without behavior changing, and push maintainers to "fix" tests by mirroring whatever the code now does.
+- **Coupled to a rare edge case** — an input the codebase won't realistically receive; the upkeep exceeds the bug it'd catch.
+- **Coupled to a temporary assumption** — a feature-flag value, transitional schema, deprecated dependency, migration intermediate state. It silently locks the assumption in or breaks loudly at the worst time.
+- **Redundant within the PR** — eight tests where two well-chosen ones would prove the change; the extra six are debt.
 
-The lens to apply: imagine the PR's context is gone. A maintainer six months from now reads only the test name and body. Do they understand what behavior is being protected, and is that behavior worth protecting? If not, flag it.
+The lens: does the maintainer understand what behavior is protected, and is it worth protecting? If not, flag it.
 
 ## Review Phases
 
-Use these as internal discipline, not as a checklist to recite back to the user.
+Internal discipline, not a checklist to recite back:
 
-1. **Context** — What is the PR trying to do? Read the description, linked issue, and commit messages. If you can't articulate the goal in one sentence, that's already a finding.
-2. **High-level fit** — Does the approach match the goal? Is it consistent with how the rest of the codebase solves similar problems? Is there a simpler version?
-3. **Line-by-line** — Logic correctness, edge cases, null/undefined paths, security (input validation, injection, secret leakage), performance (N+1 queries, blocking I/O in hot paths), error handling.
-4. **Tests** — Apply the test discipline above.
-5. **Comments** — Triage every existing thread.
-6. **Verdict** — Approve / hold / don't approve, with the why.
+1. **Context** — what is the PR trying to do (description, linked issue, commits)? If you can't state the goal in one sentence, that's already a finding.
+2. **High-level fit** — does the approach match the goal and the codebase's existing patterns? Is there a simpler version?
+3. **Line-by-line** — logic, edge cases, null/undefined paths, security (input validation, injection, secret leakage), performance (N+1 queries, blocking I/O in hot paths), error handling.
+4. **Tests** — apply the test discipline above.
+5. **Comments** — triage every existing thread.
+6. **Verdict** — approve / hold / don't approve, with the why.
 
 ## Severity Labels
 
-When you list findings, label each one so the user can decide which deserve a comment. Adopt these consistently — they map cleanly to how reviewers think.
+Label each finding so the user can decide what to post:
 
 - 🔴 **blocking** — must be addressed before merge
-- 🟡 **important** — should be addressed; worth a comment but room for discussion
+- 🟡 **important** — should be addressed; worth a comment, room for discussion
 - 🟢 **nit** — optional preference; mention only if asked
 - 💡 **suggestion** — alternative approach the author may prefer
 - ❓ **question** — clarification needed before approving
 
-Don't label nits as blocking. Don't bury blockers in a "suggestions" list. The label is the user's signal for what to actually post.
+Don't label nits as blocking or bury blockers in a "suggestions" list. The label is the user's signal for what to actually post.
 
 ## Output Shape
 
-Return the review in this order. Skip sections that are empty rather than padding them.
+Return the review in this order; skip empty sections rather than padding them.
 
-### 1. Verdict
+1. **Verdict** — one line: **Approve** (safe as-is) · **Approve with non-blocking notes** · **Hold** (needs clarification or the author's response) · **Don't approve yet** (has 🔴 blockers; list them).
+2. **Why** — 2–4 bullets of concrete evidence: specific files, behaviors, code paths, test results, CI status. No generic praise; if you say "the change is correct", say which change in which file and what makes it correct.
+3. **Outstanding comments** (only if any) — the comment table above, grouped by severity if more than a few.
+4. **Critical issues to surface** (only if any) — for each 🔴 blocker, the exact text the user can paste into GitHub, in their terse style. The user posts these, not you.
+5. **What I'd do differently** — a short, concrete alternative if one's worth raising, even on an approve (a simpler structure, a better boundary, a name that'd age better, a cheap missing test). Skip if the approach is fine; don't invent rewrites.
+6. **Approval** (only if the user explicitly authorizes it) — follow "Writing the Approval Comment". Otherwise stop after the verdict.
 
-One line. One of:
-
-- **Approve** — safe to approve as-is
-- **Approve with non-blocking notes** — safe to approve; optional comments listed
-- **Hold** — needs clarification or the author's response before deciding
-- **Don't approve yet** — has 🔴 blockers; list them
-
-### 2. Why
-
-2–4 bullets of concrete evidence. Specific files, behaviors, code paths, test results, or CI status. No generic praise. If you say "the change is correct", say which change in which file and what makes it correct.
-
-### 3. Outstanding comments (only if any)
-
-Use the comment table format from the "Triage Existing Comments" section above. Group by severity if more than a few.
-
-### 4. Critical issues to surface (only if any)
-
-For each 🔴 blocker, write the exact text the user can paste into GitHub. Match the user's PR comment style: terse, concrete, no filler. The user posts these — you do not.
-
-When a blocker needs more than a sentence — confirming a real issue *and* proposing the fix — keep it scannable instead of a wall of prose:
-
-- **Bold call-to-action labels** carry the structure: `**Confirmed — this is real.**`, `**The problem:**`, `**Why it happens:**`, `**To solve it:**`, `**Also add test coverage:**`. The reader skims labels first, then reads the part they need.
-- **One code block, for the fix only.** Context already visible in the diff (the current code, the function referenced) stays as prose with inline `identifiers` — don't give it its own block. Three or four stacked blocks bury the one that matters.
-- **One line per point.** Reference the diff (`see _close_with_operation`) instead of reproducing it.
-
-This is the substantive-comment form; the routine `❓`/`💡` notes stay 1–2 sentences.
-
-### 5. What I'd do differently
-
-A short, concrete alternative if there is one worth raising — even on an approve. Skip if the current approach is fine. Examples worth raising: a simpler structure, a different boundary, a name that would age better, a missing test that's cheap to add. Don't list rewrites for the sake of having an opinion.
-
-### 6. Approval (only if the user explicitly authorizes it)
-
-If the verdict is **Approve** or **Approve with non-blocking notes** and the user explicitly tells you to approve, follow the "Writing the Approval Comment" section below. Otherwise stop after the verdict — the user posts any comments themselves.
+When a blocker needs more than a sentence (confirming a real issue *and* proposing the fix), keep it scannable: **bold call-to-action labels** (`**The problem:**`, `**Why it happens:**`, `**To solve it:**`) carry the structure; **one code block, for the fix only** (context already in the diff stays as prose with inline `identifiers`); **one line per point**, referencing the diff (`see _close_with_operation`) instead of reproducing it. Routine `❓`/`💡` notes stay 1–2 sentences.
 
 ## Writing the Approval Comment
 
-Only do any of this once the user has explicitly authorized the approval after seeing the verdict. The default mode is still review-only.
+Only once the user has explicitly authorized approval after seeing the verdict. Default mode is still review-only.
 
 ### The review and the approval comment are different artifacts
 
-Your review — what you report back to the user — and the approval comment you post on GitHub have different audiences and different rules. Do not build the second by reformatting the first.
+Your review (what you report to the user) and the approval comment (what you post on GitHub) have different audiences and rules — don't build the second by reformatting the first.
 
-- **The review is private and answers the user's request.** If they asked you to run the tests, confirm they fail on `main`, reproduce a bug, or check that a query is index-backed — do it, and tell *them* what you found. That's the job they gave you.
-- **The approval comment is public and for the PR author.** It is a fresh artifact, filtered through "What not to put in the body" — not a copy of your review notes. Rebuild it from scratch.
+- **The review is private and answers the user's request.** If they asked you to run tests, confirm they fail on `main`, reproduce a bug, or check a query is index-backed — do it and tell *them* what you found.
+- **The approval comment is public and for the PR author.** It's a fresh artifact, filtered through "What not to put in the body" — not a copy of your review notes.
 
-A user instruction like *"verify the new tests fail on the default branch"* tells you what to **do during the review**, not what to **post**. Having done it — and having it pass — is not by itself postable. Run every candidate bullet through the body rules regardless of *why* you looked into it: if it's an automated-gate result, process narration, or something the author already knows, it stays out of the public comment even though the user asked you to check it. The user's prompt drives the review; this skill drives the posted comment.
+A user instruction like *"verify the new tests fail on the default branch"* tells you what to **do during the review**, not what to **post**. Having done it — and it passing — is not by itself postable. The user's prompt drives the review; this skill drives the posted comment.
 
 ### Pre-flight check (private to you)
 
-Before drafting the body, internally confirm:
-
-- The implementation is consistent with the PR goal.
-- No 🔴 blockers remain.
-- Previous review concerns are addressed, outdated, incorrect, or non-blocking.
-- Relevant tests and checks were considered; any failing ones are known and unrelated.
-
-Do not paste this list into the approval body — it's only there to decide whether approval is appropriate.
+Before drafting, internally confirm: the implementation matches the PR goal; no 🔴 blockers remain; previous concerns are addressed/outdated/incorrect/non-blocking; failing tests or checks are known and unrelated. Don't paste this list into the body.
 
 ### Body style
 
-Write for the PR author and human reviewers, not as a report that an AI followed review instructions.
+Write for the PR author and human reviewers, not as a report that an AI followed instructions.
 
-- Lead with the engineering conclusion: what is correct, why the PR is safe to approve, or what caveat remains non-blocking.
-- Stay anchored to *this* PR. Every point must make sense against the branch the PR merges into and speak to what the PR set out to do — judge it against its title, description, and target branch, not against changes you imagine it could have made. If a point doesn't connect to the author's stated goal, it doesn't belong in the body.
-- Include only evidence that changes reviewer confidence — behavior verified, production/log data, affected flows, important files, test results, CI status, known pre-existing failures.
+- Lead with the engineering conclusion: what's correct, why it's safe to approve, or what non-blocking caveat remains.
+- Stay anchored to *this* PR — judge it against its title, description, and target branch, not against changes you imagine it could have made. If a point doesn't connect to the author's stated goal, it doesn't belong.
+- Include only evidence that changes reviewer confidence — behavior verified, production/log data, affected flows, key files, test results, CI status, known pre-existing failures.
 - At least one sentence must be specific to this PR. Avoid generic approval phrases.
-- Keep non-blocking concerns clearly labeled as optional. Don't approve with language that sounds like unresolved required work.
-- Compact, concrete language over pleasantries. Avoid "thanks", "nice work", "happy to", and bare "looks good".
-- If checks are partially blocked by unrelated existing failures, name the failing check or file directly.
+- Keep non-blocking concerns clearly optional; don't approve with language that sounds like unresolved required work.
+- Compact, concrete language over pleasantries ("thanks", "nice work", "happy to", bare "looks good").
+- If checks are partly blocked by unrelated existing failures, name the failing check or file.
 
 ### Report what you verified, not what the author decided
 
-The author spent days in this code; you spent minutes. They chose the boundaries and made the trade-offs deliberately, so a bullet that *endorses their decision* — "catching it here is the right boundary", "the split maps cleanly to the two failure modes", "suppressing under `?draft=true` is intended" — hands them nothing they don't already have. It reads as grading their homework. And "is intended" or "is the right call" is you *inferring* intent you can't see: in review you know what the author wrote, not what they were thinking.
+The author spent days here; you spent minutes. A bullet that *endorses their decision* — "catching it here is the right boundary", "the split maps cleanly", "suppressing under `?draft=true` is intended" — hands them nothing they don't already have, and "is intended" guesses at intent you can't see from the diff. What earns a place is work the author *couldn't* have done for themselves:
 
-What earns a place in the body is work the author *couldn't* have done for themselves:
-
-- **What you ran that CI can't show** — a new test run against the *default branch* to confirm it fails there (CI only runs it on the PR branch, where passing is guaranteed, so the pass proves nothing), reproducing the bug against the pre-fix commit, or "verified the affected page on the integration env". Never report the PR-branch pass or "tests green" — that's the automated gate (see "What not to put in the body"). Report the discriminating result instead: *"the new test fails on `main`, so it genuinely covers the change."*
-- **What you cross-checked against a source of truth outside the diff** — "verified against installed `dep@7.26.3`", "the `onError` signature in `lib@5.100.14` takes a 4th arg, so `meta` resolves", "cross-checked against the `handleServerError` helper", "matches upstream PR #1674".
+- **What you ran that CI can't show** — a test run against the *default branch* to confirm it fails there (CI runs it on the PR branch, where passing is guaranteed, so the pass proves nothing), reproducing the bug against the pre-fix commit, or "verified the affected page on the integration env". Never report the PR-branch pass or "tests green" — that's the automated gate. Report the discriminating result: *"the new test fails on `main`, so it genuinely covers the change."*
+- **What you cross-checked outside the diff** — "verified against installed `dep@7.26.3`", "the `onError` signature in `lib@5.100.14` takes a 4th arg, so `meta` resolves", "cross-checked against the `handleServerError` helper".
 - **A concrete, actionable finding** — a bug, a nit, a follow-up.
 
-The test for every bullet: **could the author have written this without me?** If yes — it's their decision, their rationale, or a restatement of their diff — cut it. If it took going outside the diff to know it (running it, checking a dependency version, reading adjacent code, hitting the live app), keep it.
-
-Before — every bullet validates a decision the author already made (all four are cuttable):
-
-```markdown
-Approved.
-
-- Catching the config-load errors in the `config` property is the right boundary — exactly where these escaped before.
-- Splitting the two error types maps cleanly to the two real failure modes.
-- Suppressing the notification under `?draft=true` is intended: an admin previewing their own draft shouldn't be paged.
-- Regression tests exercise each distinct branch.
-```
-
-After — each bullet reports something checked, not something endorsed:
+The test for every bullet: **could the author have written this without me?** If yes (their decision, their rationale, a restatement of the diff), cut it. If it took going outside the diff to know it (running it, checking a dependency version, reading adjacent code, hitting the live app), keep it.
 
 ```markdown
 Approved.
@@ -251,43 +181,25 @@ Approved.
 
 ### What not to put in the body
 
-The PR author reads the approval cold — they don't see the chat history that led to the verdict. A bullet that only makes sense in that hidden context reads as filler, or as preemptive defense of a concern nobody raised.
+The author reads the approval cold — no chat history. Pass each bullet through: *does this give a reader-of-only-the-PR new information that justifies the approval?* If no, cut it. Specifically:
 
-Pass each bullet through this test:
-
-> If someone reads only the PR (no chat history with you), does this sentence give them new information that justifies the approval?
-
-If no, cut it. Specifically:
-
-- **Resolution status of existing threads.** "Codex P2 is resolved", "the author addressed @X's feedback" — the thread itself shows resolution. Mention prior comments only when their resolution materially changes the approval (a security blocker was resolved, a correctness bug was fixed in a later commit).
-- **Private review context.** Concerns *you* considered but that were never raised on the PR. If you investigated whether `<div>` inside `<label>` was an issue and decided it wasn't, don't pre-empt that on the PR — readers will wonder why you brought it up.
-- **Re-statements of the diff.** "The change moves X out of Y", "the new file adds Z" — the diff already shows this. The body should describe what was *verified*, not what was *changed*.
-- **Endorsements of the author's decisions.** "Catching it here is the right boundary", "the split maps cleanly", "X is intended" — the author made these calls deliberately and knows them better than you; restating their design as correct adds nothing, and "is intended" guesses at intent the diff doesn't show. Report what you *verified*, not what they *decided* — see "Report what you verified, not what the author decided".
-- **Pure-process evidence.** "I read the comments", "I checked the tests", "I fetched GitHub", "I reviewed the latest head" — assume the reader trusts the review. Only mention a verification step when it surfaces something the reader can't see (e.g., "verified against prod data", "ran the new test against `main` to confirm it fails there").
-- **Results from automated gates.** Anything a linter, formatter, type-checker, pre-commit hook, or CI workflow runs on every push is a foregone conclusion — the code conforms or it wouldn't be mergeable. "Ran `ruff` — clean", "`prettier`/`black`/`eslint` passes", "no formatting issues", "lint green" tells the reader nothing they didn't already assume. Glance at the repo's `.github/workflows/`, `.pre-commit-config.yaml`, and linter config to see what's automated, then report only what those tools *can't* catch — logic, behavior, dead code an import-linter wouldn't flag, cross-file references, runtime correctness.
-- **AI mechanics.** "I am an AI", "the user asked me to approve", "I followed the prompt". Keep that out of the public comment entirely.
-
-When in doubt: did anyone on the PR raise this, or is it leaking from your private investigation? If the latter, it doesn't belong in the body.
+- **Resolution status of existing threads** — "Codex P2 is resolved", "addressed @X's feedback". The thread shows resolution; mention it only when it materially changes the approval (a security blocker or correctness bug fixed later).
+- **Private review context** — concerns *you* considered that were never raised on the PR. Readers wonder why you brought it up.
+- **Re-statements of the diff** — "the change moves X out of Y". The diff shows this; describe what was *verified*, not what changed.
+- **Endorsements of the author's decisions** — "is the right boundary", "maps cleanly", "is intended". They made these calls deliberately; report what you *verified*, not what they *decided*.
+- **Pure-process evidence** — "I read the comments", "I fetched GitHub". Only mention a step when it surfaces something the reader can't see (e.g. "verified against prod data").
+- **Results from automated gates** — anything a linter, formatter, type-checker, pre-commit hook, or CI workflow runs on every push is a foregone conclusion. "Ran `ruff` — clean", "lint green" tells the reader nothing they didn't assume. Glance at `.github/workflows/`, `.pre-commit-config.yaml`, and linter config to see what's automated, and report only what they *can't* catch — logic, behavior, dead code, cross-file references, runtime correctness.
+- **AI mechanics** — "I am an AI", "the user asked me to approve". Keep out entirely.
 
 ### Body vs. line comments
 
-The approval body justifies the approval. It is **not** a place to enumerate every non-blocking observation.
+The approval body justifies the approval — it's **not** a dump of every non-blocking observation. If a bullet starts with "minor:", "nit:", "as a follow-up:", or "non-blocking:", move it to a line comment, then approve. The default for non-blocking notes is **line comment**, not body — usefulness is the bar for *posting* it, not for putting it in the body.
 
-If a bullet starts with "minor:", "nit:", "as a follow-up:", or "non-blocking:" — move it to a line comment on the relevant file, then approve. The default for non-blocking notes is **line comment**, not approval body. This applies even when the observation is genuinely useful; usefulness is the bar for *posting* it, not for putting it in the approval body.
-
-Exceptions that genuinely belong in the body:
-
-- **Coordination notes** — merge order, deployment dependencies, "merge after #1234".
-- **Acknowledged unrelated failures** — naming a pre-existing red check so reviewers know it's known and not caused by this PR.
-- **Material caveats** — a known limitation of the approval itself (e.g., "approving the API change; the consumer update is tracked in #1235").
-
-Anything else that's "optional, suggestion, or feedback" belongs on a file line, not in the approval body.
+Exceptions that do belong in the body: **coordination notes** (merge order, "merge after #1234"), **acknowledged unrelated failures** (naming a pre-existing red check so reviewers know it's known), **material caveats** (a known limitation of the approval itself, e.g. "approving the API change; the consumer update is tracked in #1235").
 
 #### Prefix line comments with "AI suggestion:"
 
-Whenever you post a line comment on a PR — approval flow or not — **start the body with `AI suggestion:` on its own line, then a blank line, then the actual comment text**. Don't lead the first sentence with the phrase. This keeps AI-authored suggestions visually distinct from human review feedback so the author can weigh them accordingly.
-
-Format the comment body the same way as the approval body: **one sentence per line**. Start each sentence on its own line by breaking after every sentence-ending `.`, `?`, or `!`. GitHub renders consecutive sentences as one wrapped block, so without the breaks the comment becomes hard-to-scan running text.
+Whenever you post a line comment — approval flow or not — **start the body with `AI suggestion:` on its own line, then a blank line, then the comment text** (don't lead the first sentence with the phrase). This keeps AI-authored suggestions visually distinct from human feedback so the author can weigh them accordingly. Format it **one sentence per line** (break after every sentence-ending `.`, `?`, `!`), same as the approval body.
 
 ```markdown
 AI suggestion:
@@ -296,23 +208,16 @@ This fires for every `option.is_active`, but the target only exists for the curr
 Scope the handler to the active option so the others don't get redundant updates.
 ```
 
-The prefix applies to line comments only — the approval body is already attributed to the reviewer in the GitHub UI.
-
 #### Line comment style: finding → fix, two sentences
 
 Every line comment is exactly two sentences:
 
-1. **The finding** — the concrete defect or risk, with the evidence compressed into the same sentence as an em-dash clause or parenthetical, not narrated separately.
-2. **The ask** — the specific fix, test case, or question, concrete enough to act on without re-deriving it: the exact condition, the exact inputs, the exact assertion.
+1. **The finding** — the concrete defect or risk, with the evidence compressed into the same sentence (em-dash clause or parenthetical), not narrated separately.
+2. **The ask** — the specific fix, test case, or question, concrete enough to act on: the exact condition, inputs, assertion.
 
-Rules:
+Lead with the fact, not the investigation ("I verified locally that X" → "X (verified locally)"). Inline `identifiers` carry the precision; no headings, lists, or severity labels inside the comment. If it won't fit in two sentences, the overflow is either evidence to compress into the finding or a second finding that deserves its own comment. Politeness that costs no length is welcome ("Could you add…" over a bare "Add…"); soften the phrasing, never the claim.
 
-- Lead with the fact, not the investigation. "I verified locally that X" becomes "X (verified locally)" — process narration shrinks to a parenthetical or disappears.
-- Inline `identifiers` carry the precision; no headings, lists, or severity labels inside the comment.
-- If it doesn't fit in two sentences, the overflow is either evidence to compress into the finding or a second finding that deserves its own comment.
-- Politeness that costs no length is welcome — "Could you add…" over a bare "Add…", "worth checking" over "check". Soften the phrasing, never the claim: the finding stays as direct as the evidence allows.
-
-Before (bloated — narrated evidence, restated context, three extra sentences):
+Before (bloated — narrated evidence, restated context, extra sentences):
 
 ```markdown
 AI suggestion:
@@ -320,7 +225,6 @@ AI suggestion:
 None of the touched tests actually pin this fix — they all pass against `main`'s version of `return_label_service.py` (I verified locally: body courier == request courier everywhere, and `test_return_label` never asserts `label.courier`, so the acme-post fixture change is inert).
 The new fallback test only pins behavior that `main` already had.
 Can you add the one discriminating case: body `courier="acme-uk"`, request `courier="acme-dropoff"`, assert `label.courier == "acme-uk"`?
-Without it a future cleanup of the `or` fallback can silently revert the ticket.
 ```
 
 After (finding → fix):
@@ -334,55 +238,28 @@ Could you add the discriminating case: body `courier="acme-uk"`, request `courie
 
 ### Format for readability
 
-Reviewers skim. A wall of text hides the conclusion and makes the evidence hard to verify at a glance.
+Reviewers skim. **Default structure, always: a one-line lead, a blank line, then bullets — never a single flowing paragraph.** A prose paragraph stringing five facts together with commas and "and" is the most common way a good approval becomes unreadable.
 
-**Default structure, always: a one-line lead, a blank line, then bullets — never a single flowing paragraph.** Even a short approval takes the lead-plus-bullets shape. A prose paragraph that strings five facts together with commas and "and" is the single most common way an otherwise-good approval becomes unreadable — if you catch yourself writing one, that's the signal to split it into bullets. And break to a new line after every sentence-ending `.`, `?`, or `!`, because GitHub collapses consecutive sentences into one wrapped block and the structure you intended disappears.
+- **3 bullets max — fewer is better.** Keep only points that change merge confidence; a fourth point is usually a line comment.
+- **One short sentence per bullet, one idea.** A bullet is a headline, not a paragraph. If you need a second sentence or an "and" stitching two facts together, it's too deep — cut to the core claim or move the detail to a line comment.
+- **Blank lines** between the lead and the bullet list (GitHub markdown collapses without them).
+- **Inline `code` is for one short identifier**; three or more spans in a sentence → use bullets (one per bullet) or a fenced block.
+- **Fenced code block** when showing more than one line of code.
+- **Spell out acronyms on first use** ("JWT (JSON Web Token)", "CSP (Content Security Policy)"); the bare acronym is fine after.
+- **Start a new line after every sentence** (break after `.`, `?`, `!`), including inside a bullet. (Periods in identifiers like `option.is_active`, `e.g.`, or version numbers don't count.)
 
-- **One short lead line, blank line, then bullets.** The lead is the verdict ("Approved.", "Approved with one non-blocking note.").
-- **3 bullets max — fewer is better.** Keep only the points that change merge confidence. If a fourth point feels essential, it's usually a line comment, not approval-body material (see "Body vs. line comments"). More than three bullets means the PR needs a real review thread, not a longer approval.
-- **One short sentence per bullet, one idea.** A bullet is a headline, not a paragraph. If you need a second sentence, a trailing `— because…` clause, or an "and" stitching two facts together to make the point, it's too deep for the approval body — cut it to its core claim or move the detail to a line comment. The author can open the diff for the rest; the body exists to state the verdict and the one or two things that justify it.
-- **Blank lines between paragraphs / between the lead and the bullet list.** GitHub markdown collapses without them.
-- **Inline `code` is for one short identifier.** If you'd need three or more inline-code spans in a sentence, switch to bullets (one identifier per bullet) or a fenced block.
-- **Fenced code block when showing more than one line of code, or an actual snippet rather than just a name.**
-- **Spell out acronyms on first use** within a comment ("JWT (JSON Web Token) refresh", "CSP (Content Security Policy)"). After the first occurrence the bare acronym is fine.
-- **Start a new line after every sentence — including inside a bullet.** Break after each sentence-ending `.`, `?`, or `!`. GitHub markdown renders consecutive sentences as one wrapped block — hard to scan. (Periods inside identifiers like `option.is_active`, abbreviations like `e.g.`, or version numbers don't count — only sentence-ending punctuation.)
-
-Anti-pattern (wall of text):
+Anti-pattern (wall of text) → fix (lead + headline bullets):
 
 ```markdown
-Approved. The mechanical swap from `/regex/.test(input)` to `isValidFoo()` is consistent across all interfaces, and the divergent paths are intentional per the PR description: acme keeps its existing auth carve-out, while globex intentionally always validates…
+Approved. The mechanical swap from `/regex/.test(input)` to `isValidFoo()` is consistent across all interfaces, and the divergent paths are intentional per the PR description: acme keeps its auth carve-out while globex always validates…
 ```
-
-Better (lead + bullets):
 
 ```markdown
 Approved.
 
 - Mechanical swap from `/regex/.test(input)` to `isValidFoo()` is consistent across all interfaces.
-- Divergent paths are intentional per the PR description: acme keeps the auth carve-out, globex intentionally always validates.
+- Divergent paths are intentional per the PR description: acme keeps the auth carve-out, globex always validates.
 - Non-blocking JSDoc cleanup can land as a follow-up.
-```
-
-Each bullet is a headline — trim the paragraph down to its claim. A reviewer who wants the mechanism opens the diff.
-
-Too deep (each bullet is a multi-sentence paragraph — the most common way an approval gets bloated):
-
-```markdown
-Approved.
-
-- The validation swap is the correct fix: `validateInput()` now runs on every interface, so malformed payloads are rejected before they reach the mapper, while the legacy `/regex/` path is fully removed. Confirmed no callers still reference the old `rawInputCheck` helper.
-- Legacy records are handled by normalize-on-read rather than a backfill. The check only fires on the old payload shape, and the writer now emits the canonical shape, so new writes can't re-trigger it.
-- Non-blocking, follow-up: `normalizeLegacyShape` runs on every read path (4 call sites), and the records carry no version marker to self-heal. Worth normalizing once at load.
-```
-
-Better (headlines; the follow-up moves to a line comment):
-
-```markdown
-Approved.
-
-- Validation swap is the canonical fix: `validateInput()` rejects malformed payloads before the mapper.
-- Legacy records normalize-on-read; the new write shape can't re-trigger the old path.
-- Swap is complete — no callers reference the old `rawInputCheck` helper.
 ```
 
 ### Approval body shapes
@@ -413,7 +290,6 @@ Approved. Verified <risk area> against <source of truth>:
 
 - <evidence 1: behavior, data, or code path>
 - <evidence 2: unaffected flow or edge case>
-- <evidence 3: checks/tests>
 ```
 
 Genuine one-liner — only when there's truly one point:
@@ -422,35 +298,9 @@ Genuine one-liner — only when there's truly one point:
 LGTM — the new validation is scoped to authenticated routes; the public endpoints are unchanged.
 ```
 
-Padded with non-blocking nits (anti-pattern — move these to line comments instead):
-
-```markdown
-Approved.
-
-- Core change looks correct.
-- Targeted test passes.
-- Minor: JSDoc could be tidied as a follow-up.
-- Nit: variable name on line 42 could be clearer.
-- Non-blocking: consider extracting the helper into a util.
-```
-
-Too process-heavy (anti-pattern):
-
-```markdown
-Approved. I reviewed the latest PR head from GitHub, checked existing review threads, and verified tests.
-```
-
-Too generic (anti-pattern):
-
-```markdown
-Approved. The changes look consistent with the PR goal, and I do not see any blocking issues. Nice to move forward.
-```
-
 ### Submitting the approval
 
-If line comments are part of the flow, add them to a pending review first (see "Posting Comments — Pending Review Only") so the approval submission wraps everything together, then submit the pending review with `pull_request_review_write` method `submit_pending`, event `APPROVE`, and the approval body.
-
-Without line comments, `gh` works too:
+If line comments are part of the flow, add them to a pending review first (see "Posting Comments — Pending Review Only") so the approval submission wraps everything together, then submit the pending review with `pull_request_review_write` method `submit_pending`, event `APPROVE`, and the approval body. Without line comments, `gh` works too:
 
 ```bash
 gh pr review <num> --approve --body "$(cat <<'EOF'
@@ -462,42 +312,40 @@ EOF
 )"
 ```
 
-Use `--body-file <path>` instead of inline heredoc when the body lives in a file already. Never submit the approval before the user has clearly authorized it for *this* PR — prior authorization on a different PR does not carry over.
+Use `--body-file <path>` when the body already lives in a file. Never submit before the user has clearly authorized it for *this* PR — prior authorization on a different PR doesn't carry over.
 
 ## Posting Comments — Pending Review Only
 
-When the user authorizes posting comments on the PR (with or without an approval), never post them as immediate one-off comments — no `gh pr comment`, no direct single review-comment API calls. Always batch them into a **pending review**:
+When the user authorizes posting comments (with or without an approval), never post them as immediate one-off comments — no `gh pr comment`, no direct single review-comment API calls. Always batch them into a **pending review**:
 
 1. Create a pending review (GitHub MCP `pull_request_review_write`, method `create`, no `event`).
 2. Add each comment with `add_comment_to_pending_review`.
-3. Leave the review pending for the user to inspect, edit, and submit themselves — submit it only if they explicitly say so, and with the event they name.
+3. Leave it pending for the user to inspect, edit, and submit themselves — submit only if they explicitly say so, with the event they name.
 
-A pending review keeps the comments invisible to the PR author until the user signs off, lets the user amend or discard them before anything goes public, and lands all feedback as one review instead of a comment stream.
+A pending review keeps comments invisible to the author until the user signs off, lets them amend or discard before anything goes public, and lands all feedback as one review instead of a comment stream.
 
 ## What Not to Do
 
-- **Don't post comments yourself.** The user posts. You provide the text. When the user does authorize posting, go through a pending review (see "Posting Comments — Pending Review Only") — never one-off comments.
-- **Don't approve until explicitly authorized.** If the user asks "can I approve this PR?" or "should this be approved?", answer with the verdict first. Submit an approving GitHub review only when the user clearly instructs you to — see "Writing the Approval Comment" below.
+- **Don't post comments yourself.** The user posts; you provide the text. When authorized, go through a pending review — never one-off comments.
+- **Don't approve until explicitly authorized.** If asked "can I approve this?", answer with the verdict first; submit an approving review only when clearly instructed.
 - **Don't trust "resolved" markers.** Verify against the diff.
 - **Don't recite phases.** They're discipline, not a script.
-- **Don't pad with process narration.** "I fetched the latest head, then read the diff, then checked CI..." — the user assumes you did. Show conclusions, not steps.
+- **Don't pad with process narration.** The user assumes you did the steps — show conclusions, not steps.
 - **Don't bike-shed nits.** If the linter or formatter could catch it, it's not your job.
-- **Don't approve away unrelated CI failures silently.** If checks are red, name which failures are pre-existing/unrelated and which were introduced by this PR.
+- **Don't approve away unrelated CI failures silently.** Name which red checks are pre-existing/unrelated vs introduced by this PR.
 
 ## Common Failure Modes
 
-These are the patterns that cause a PR review to mislead:
-
-- **Rubber-stamping** — scrolling the diff without checking whether tests actually exercise the change.
-- **Trusting `resolved` threads** — the marker means someone clicked a button, not that the fix is correct.
-- **Skipping the default-branch check** — a green test suite on the PR branch doesn't prove the new test would have caught the bug.
-- **Treating tautological mocks as coverage** — `mock.return_value = X; assert result == X` is not a test.
-- **Stale local state** — reviewing against a SHA that's already been replaced by a force-push.
-- **Generic verdicts** — "looks good, approving" with no evidence is indistinguishable from not having reviewed.
+- **Rubber-stamping** — scrolling the diff without checking whether tests exercise the change.
+- **Trusting `resolved` threads** — the marker means a button was clicked, not that the fix is correct.
+- **Skipping the default-branch check** — a green suite on the PR branch doesn't prove the new test would catch the bug.
+- **Tautological mocks as coverage** — `mock.return_value = X; assert result == X` is not a test.
+- **Stale local state** — reviewing a SHA already replaced by a force-push.
+- **Generic verdicts** — "looks good, approving" with no evidence is indistinguishable from not reviewing.
 
 ## Useful Shapes
 
-A clean approve:
+Clean approve:
 
 ```markdown
 **Verdict:** Approve.
@@ -529,12 +377,12 @@ Don't approve:
 **Verdict:** Don't approve yet.
 
 **Why:**
-- 🔴 The `lookupFoo` test mocks the SQL client to return the exact shape the assertion checks, so the test passes regardless of the production query (`tests/lookup.test.ts:42`).
-- 🔴 Existing comment at `r1234567890` about null-handling at `foo.ts:180` is not addressed in the current diff.
+- 🔴 The `lookupFoo` test mocks the SQL client to return the exact shape the assertion checks, so it passes regardless of the production query (`tests/lookup.test.ts:42`).
+- 🔴 Existing comment at `r1234567890` about null-handling at `foo.ts:180` isn't addressed in the current diff.
 
 **Critical issues to surface:**
 
-> The new test at `tests/lookup.test.ts:42` is tautological — the mock dictates the assertion. Suggest replacing with an integration test that hits the real query path, or removing the test if coverage already exists at the integration layer.
+> The new test at `tests/lookup.test.ts:42` is tautological — the mock dictates the assertion. Replace it with an integration test that hits the real query path, or remove it if coverage already exists at the integration layer.
 
 > The null-handling concern from r1234567890 still applies — `item.barQty` can be `undefined` for child entries, and `foo.ts:180` will throw. The diff doesn't change that path.
 ```
