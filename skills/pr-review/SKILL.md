@@ -197,30 +197,44 @@ The approval body justifies the approval — it's **not** a dump of every non-bl
 
 Exceptions that do belong in the body: **coordination notes** (merge order, "merge after #1234"), **acknowledged unrelated failures** (naming a pre-existing red check so reviewers know it's known), **material caveats** (a known limitation of the approval itself, e.g. "approving the API change; the consumer update is tracked in #1235").
 
-#### Prefix line comments with "AI suggestion:"
+#### Prefix line comments with "AI suggestion (P#):"
 
-Whenever you post a line comment — approval flow or not — **start the body with `AI suggestion:` on its own line, then a blank line, then the comment text** (don't lead the first sentence with the phrase). This keeps AI-authored suggestions visually distinct from human feedback so the author can weigh them accordingly. Format it **one sentence per line** (break after every sentence-ending `.`, `?`, `!`), same as the approval body.
+Whenever you post a line comment — approval flow or not — **start the body with `AI suggestion (P#):` on its own line, then a blank line, then the comment text** (don't lead the first sentence with the phrase). This keeps AI-authored suggestions visually distinct from human feedback, and the `P#` tells the author how much to care:
+
+- **P1** — critical: a correctness, security, or data bug, or a real blocker. Should be fixed before merge.
+- **P2** — important: worth addressing, but there's room for discussion.
+- **P3** — nitpick: optional preference or polish; take it or leave it.
+
+Format it **one sentence per line** (break after every sentence-ending `.`, `?`, `!`), same as the approval body.
 
 ```markdown
-AI suggestion:
+AI suggestion (P2):
 
 This fires for every `option.is_active`, but the target only exists for the currently selected option.
 Scope the handler to the active option so the others don't get redundant updates.
 ```
 
-#### Line comment style: finding → fix, two sentences
+#### Line comment style: say it in a sentence
 
-Every line comment is exactly two sentences:
+**A line comment is one sentence by default — write like a busy human reviewer, not a report.** The owner knows their own PR far better than you, so don't re-explain the mechanism, the background, or why it matters — say *what to change* (and where) and stop. An AI-attributed comment that runs several sentences gets skimmed or ignored; a one-liner gets read and acted on. And if a one-line ask won't move the owner, a paragraph won't either — so the extra text is pure cost, for both of you.
 
-1. **The finding** — the concrete defect or risk, with the evidence compressed into the same sentence (em-dash clause or parenthetical), not narrated separately.
-2. **The ask** — the specific fix, test case, or question, concrete enough to act on: the exact condition, inputs, assertion.
+Shape it as **finding → ask**, each as short as it can be:
 
-Lead with the fact, not the investigation ("I verified locally that X" → "X (verified locally)"). Inline `identifiers` carry the precision; no headings, lists, or severity labels inside the comment. If it won't fit in two sentences, the overflow is either evidence to compress into the finding or a second finding that deserves its own comment. Politeness that costs no length is welcome ("Could you add…" over a bare "Add…"); soften the phrasing, never the claim.
+1. **The finding** — the defect or risk in a clause, evidence folded in (`file:line` or a short parenthetical), not narrated.
+2. **The ask** — the specific change, concrete enough to act on.
+
+**Cut the windup:** no "I noticed…", no restating what the code does, no mechanism lecture, no selling the benefit. Lead with the fact, not the investigation ("I verified locally that X" → "X (verified locally)"). The priority rides in the `AI suggestion (P#):` prefix, not the body. Politeness that costs no length is welcome ("Could you…"); soften the phrasing, never the claim.
+
+Go past one or two sentences **only when the content needs it, never to justify** — and even then, keep it minimal:
+
+- **Several items** (files, call sites, cases) → a short lead line, then **one bullet each** (with its `file:line`), not a comma-run in a paragraph.
+- **A concrete change** → a ` ```suggestion ` block (one-click apply), not prose describing it.
+- Anything else → resist adding structure; a simple point stays a sentence.
 
 Before (bloated — narrated evidence, restated context, extra sentences):
 
 ```markdown
-AI suggestion:
+AI suggestion (P2):
 
 None of the touched tests actually pin this fix — they all pass against `main`'s version of `return_label_service.py` (I verified locally: body courier == request courier everywhere, and `test_return_label` never asserts `label.courier`, so the acme-post fixture change is inert).
 The new fallback test only pins behavior that `main` already had.
@@ -230,10 +244,32 @@ Can you add the one discriminating case: body `courier="acme-uk"`, request `cour
 After (finding → fix):
 
 ```markdown
-AI suggestion:
+AI suggestion (P2):
 
 All touched tests pass against `main`'s version of this file, so nothing pins the new precedence.
 Could you add the discriminating case: body `courier="acme-uk"`, request `courier="acme-dropoff"`, assert `label.courier == "acme-uk"`?
+```
+
+When the finding enumerates several locations, bullets beat a comma-run — bad (four `file:line` refs crammed into a sentence):
+
+```markdown
+AI suggestion (P2):
+
+Four files bypass these constants with bare strings — `foo/config.py:173`, `foo/utils.py:73`/`:77`, `foo/views.py:498`/`:506`, `foo/service.py:1071` — so an unexpected value silently reads as the default.
+```
+
+Better (lead line, one bullet per file, then the ask):
+
+```markdown
+AI suggestion (P2):
+
+Four call sites bypass the constants with bare strings, so an unexpected value silently reads as the default:
+- `foo/config.py:173`
+- `foo/utils.py:73` / `:77`
+- `foo/views.py:498` / `:506`
+- `foo/service.py:1071`
+
+Could you move them to a `StrEnum` + `*_CHOICES` list in `foo/choices.py`, mirroring the pattern two fields above?
 ```
 
 ### Format for readability
