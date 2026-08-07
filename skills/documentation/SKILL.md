@@ -125,9 +125,26 @@ Then go through the open questions with the user, one at a time. When they answe
 - **Match the length, too.** When sibling docs in the same folder exist, follow their length — if they are 100–200 lines, stay in that range; don't write a 400-line doc when the others are 150 lines. Use the sibling length as a ceiling, not a target.
 - **The doc is ready to read, never a worksheet.** No `[TODO]`, no `TBD`, no `<TBC>`, no "[needs screenshot]", no "[confirm with user]". Author notes are noise to the reader. They stay in Notion and wikis after the conversation that created them ends, and no one remembers what they meant. If you can't fill something with confidence, omit it or use more general words so the gap is hidden. Keep open questions in your private notes and raise them in your chat reply, not in the doc.
 - **Write first, ask second.** Write the whole doc in one pass using what you have, then share the open questions with the user in the chat. Don't block the doc behind a long Q&A before any text is on the page; equally, don't fill the doc with placeholders that show your own open questions.
-- **Diagrams and tables when they help.** Lifecycle diagrams (Mermaid), responsibility tables, decision matrices, and concrete examples are useful when they replace prose, not when they only decorate the doc. Use them when they save the reader work.
+- **Diagrams, tables, and callouts when they save the reader work — never to decorate.** A **Mermaid** diagram earns its place for a lifecycle, flow, sequence, or state machine — one diagram beats three paragraphs of steps, and it renders on GitHub, Notion, and most wikis. Tables suit responsibility splits, decision matrices, config keys, and before/after. Use a **GitHub alert** (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) for a genuine must-know — a setup gotcha, a destructive step, a caveat — not for ordinary prose. **Caveat:** alerts render as callout boxes only on GitHub; in Notion/Confluence they degrade to a plain quote showing a literal `[!NOTE]`, so if the doc's home is a wiki, use a bold `**Note:**` / `**Warning:**` line instead. Mermaid has no such problem.
 - **One file, one feature.** Don't combine unrelated topics. If the request covers two systems, write two docs and link them.
 - **One topic, one main home.** In a single doc, every deep explanation lives in exactly one section. If you find yourself explaining the retry workflow in full under "How it works" _and_ again in full under "Failure modes", pick the main section to own the topic and replace the duplicate with a one-line summary and a reference. Layered content (a short Quick start that points at a detailed Setup section, a TL;DR that introduces an Overview, Examples that show Rules stated earlier) is the opposite of duplication and is good — each layer adds something the others don't.
+
+## Callouts and diagrams
+
+A must-know, as a GitHub alert (renders as a callout box on GitHub):
+
+```markdown
+> [!WARNING]
+> Publishing overwrites the live version — there is no undo.
+```
+
+A lifecycle, as Mermaid — one diagram instead of a paragraph of steps:
+
+```mermaid
+flowchart LR
+  Draft --> Review --> Published
+  Review -->|changes requested| Draft
+```
 
 ## Anti-Patterns
 
