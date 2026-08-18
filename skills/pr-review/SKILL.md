@@ -49,7 +49,7 @@ When listing outstanding comments back to the user, group by severity and use th
 | `Issue`         | Brief description                                                 |
 
 ```markdown
-## 🔴 Blocking — 2 comments
+## P1 (Blocking) — 2 comments
 
 | #   | Discussion ID | File            | Line | Issue               |
 | --- | ------------- | --------------- | ---- | ------------------- |
@@ -109,28 +109,28 @@ Internal discipline, not a checklist to recite back:
 
 ## Severity Labels
 
-Label each finding so the user can decide what to post:
+Label each finding so the user can decide what to post — the same P1/P2/P3 scale as the `AI suggestion (P#):` prefix, plain text, no emojis:
 
-- 🔴 **blocking** — must be addressed before merge
-- 🟡 **important** — should be addressed; worth a comment, room for discussion
-- 🟢 **nit** — optional preference; mention only if asked
-- 💡 **suggestion** — alternative approach the author may prefer
-- ❓ **question** — clarification needed before approving
+- **P1 (blocking)** — must be addressed before merge
+- **P2 (important)** — should be addressed; worth a comment, room for discussion
+- **P3 (nit)** — optional preference; mention only if asked
+- **suggestion** — an alternative approach the author may prefer (not a severity)
+- **question** — clarification needed before approving (not a severity)
 
-Don't label nits as blocking or bury blockers in a "suggestions" list. The label is the user's signal for what to actually post.
+Don't label a P3 nit as P1, or bury a P1 in a list of suggestions. The label is the user's signal for what to actually post.
 
 ## Output Shape
 
 Return the review in this order; skip empty sections rather than padding them.
 
-1. **Verdict** — one line: **Approve** (safe as-is) · **Approve with non-blocking notes** · **Hold** (needs clarification or the author's response) · **Don't approve yet** (has 🔴 blockers; list them).
+1. **Verdict** — one line: **Approve** (safe as-is) · **Approve with non-blocking notes** · **Hold** (needs clarification or the author's response) · **Don't approve yet** (has P1 blockers; list them).
 2. **Why** — 2–4 bullets of concrete evidence: specific files, behaviors, code paths, test results, CI status. No generic praise; if you say "the change is correct", say which change in which file and what makes it correct.
 3. **Outstanding comments** (only if any) — the comment table above, grouped by severity if more than a few.
-4. **Critical issues to surface** (only if any) — for each 🔴 blocker, the exact text the user can paste into GitHub, in their terse style. The user posts these, not you.
+4. **Critical issues to surface** (only if any) — for each P1 blocker, the exact text the user can paste into GitHub, in their terse style. The user posts these, not you.
 5. **What I'd do differently** — a short, concrete alternative if one's worth raising, even on an approve (a simpler structure, a better boundary, a name that'd age better, a cheap missing test). Skip if the approach is fine; don't invent rewrites.
 6. **Approval** (only if the user explicitly authorizes it) — follow "Writing the Approval Comment". Otherwise stop after the verdict.
 
-When a blocker needs more than a sentence (confirming a real issue *and* proposing the fix), keep it scannable: **bold call-to-action labels** (`**The problem:**`, `**Why it happens:**`, `**To solve it:**`) carry the structure; **one code block, for the fix only** (context already in the diff stays as prose with inline `identifiers`); **one line per point**, referencing the diff (`see _close_with_operation`) instead of reproducing it. Routine `❓`/`💡` notes stay 1–2 sentences.
+When a blocker needs more than a sentence (confirming a real issue *and* proposing the fix), keep it scannable: **bold call-to-action labels** (`**The problem:**`, `**Why it happens:**`, `**To solve it:**`) carry the structure; **one code block, for the fix only** (context already in the diff stays as prose with inline `identifiers`); **one line per point**, referencing the diff (`see _close_with_operation`) instead of reproducing it. Routine question/suggestion notes stay 1–2 sentences.
 
 ## Writing the Approval Comment
 
@@ -147,7 +147,7 @@ A user instruction like *"verify the new tests fail on the default branch"* tell
 
 ### Pre-flight check (private to you)
 
-Before drafting, internally confirm: the implementation matches the PR goal; no 🔴 blockers remain; previous concerns are addressed/outdated/incorrect/non-blocking; failing tests or checks are known and unrelated. Don't paste this list into the body.
+Before drafting, internally confirm: the implementation matches the PR goal; no P1 blockers remain; previous concerns are addressed/outdated/incorrect/non-blocking; failing tests or checks are known and unrelated. Don't paste this list into the body.
 
 ### Body style
 
@@ -413,8 +413,8 @@ Don't approve:
 **Verdict:** Don't approve yet.
 
 **Why:**
-- 🔴 The `lookupFoo` test mocks the SQL client to return the exact shape the assertion checks, so it passes regardless of the production query (`tests/lookup.test.ts:42`).
-- 🔴 Existing comment at `r1234567890` about null-handling at `foo.ts:180` isn't addressed in the current diff.
+- P1 — The `lookupFoo` test mocks the SQL client to return the exact shape the assertion checks, so it passes regardless of the production query (`tests/lookup.test.ts:42`).
+- P1 — Existing comment at `r1234567890` about null-handling at `foo.ts:180` isn't addressed in the current diff.
 
 **Critical issues to surface:**
 
