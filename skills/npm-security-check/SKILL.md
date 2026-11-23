@@ -126,6 +126,7 @@ Two paths — let the user pick:
   socket config set apiToken sktsec_t_--RAN5U4ivauy4w37-6aoKyYPDt5ZbaT5JBVMqiwKo_api --no-banner --no-spinner
   socket config set defaultOrg SocketDemo --no-banner --no-spinner
   ```
+- **Organization API token** (created in the Socket dashboard under Settings → API Tokens): the user exports it as `SOCKET_CLI_API_TOKEN`, which the CLI reads with no `socket config` step. The token needs the **`packages:list`** scope — without it every score call returns 403 (`requiredScopes: ["packages:list"]`).
 
 ### Option B — Socket.dev MCP server
 
@@ -242,7 +243,7 @@ After PROCEED, run the original install command. After WARN, wait for explicit u
 ## Error Handling
 
 - **CLI returns 401/403 / "API token may not have the required permissions"**: the CLI is installed but unauthenticated. Do not run `socket login` or write to `~/.socket/` yourself. Drop down to MCP mode if available; otherwise go to Bootstrap mode and let the user choose how to authenticate.
-- **Socket API rate-limited (HTTP 429)**: tell the user the rate limit was hit and suggest they authenticate with `socket login` for a free account if they want higher limits. Don't retry in a tight loop.
+- **Socket API rate-limited (HTTP 429)** or the token's quota is used up (each score check spends quota): drop down to MCP mode if available. Otherwise tell the user the limit was hit and suggest they authenticate with `socket login` for a free account if they want higher limits. Don't retry in a tight loop.
 - **Package not found in Socket's index**: rare for npm. Surface the limitation to the user, fall back to `npm view <name>` for basic metadata, and recommend manual review.
 - **MCP tool returns an unexpected shape**: the Socket MCP is evolving. Surface the parse error to the user and offer to fall back to the CLI (only if it is authenticated and working) or Bootstrap mode.
 - **Network unavailable**: tell the user the check could not complete and ask whether to skip (with explicit acknowledgement) or wait. Never silently skip.
